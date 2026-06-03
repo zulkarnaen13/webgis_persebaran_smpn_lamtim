@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Peta Persebaran - WebGIS SMP</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="navbar">
+        <a href="index.html">Beranda</a>
+        <a href="about.html">Tentang</a>
+        <a href="map.html" class="active">Peta Persebaran</a>
+        <a href="contact.html">Kontak</a>
+    </div>
+
+    <div class="webgis-container">
+        <div class="sidebar-left" id="sidebar">
+            <div id="default-instruction" class="instruction-box">
+                <h3>Informasi Sekolah</h3>
+                <p>Silakan klik salah satu titik marker sekolah pada peta untuk menampilkan foto, kecamatan, alamat jalan, dan titik koordinat.</p>
+            </div>
+            
+            <div id="school-details" class="details-box" style="display: none;">
+                <div class="school-photo-wrapper">
+                    <img id="school-img" src="" alt="Foto Sekolah">
+                </div>
+                <div class="school-info-text">
+                    <h2 id="school-name">Nama Sekolah</h2>
+                    <hr>
+                    <p><strong>Kecamatan:</strong> <span id="school-district">-</span></p>
+                    <p><strong>Alamat Jalan:</strong> <span id="school-address">-</span></p>
+                    <p><strong>Titik Koordinat:</strong> <span id="school-coords">-</span></p>
+                </div>
+            </div>
+        </div>
+
+        <div id="map"></div>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <script src="batas.js"></script>
+    <script src="sekolah.js"></script>
+
+    <script>
+        // 3. Inisialisasi Peta
+        var map = L.map('map', {
+            zoomControl: true
+        }).setView([-5.1500, 105.6500], 10); 
+
+        // 4. Base Map OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        // =========================================================================
+        // A. MENAMPILKAN GARIS BATAS ADMINISTRASI (DARI BATAS.JS)
+        // =========================================================================
+        if (typeof batasLampungTimur !== 'undefined') {
+            L.geoJSON(batasLampungTimur, {
+                style: {
+                    color: "#ff4d4d",      
+                    weight: 2.5,           
+                    opacity: 0.85,         
+                    fillColor: "#ff4d4d",  
+                    fillOpacity: 0.05      
+                }
+            }).addTo(map);
+        }
+
+        // =========================================================================
+        // B. MENAMPILKAN 62 TITIK SEKOLAH (DARI SEKOLAH.JS)
+        // =========================================================================
+        if (typeof sebaranSekolah !== 'undefined') {
+            L.geoJSON(sebaranSekolah, {
+                
+                // Mengubah titik kordinat GeoJSON menjadi Marker pin biru
+                pointToLayer: function (feature, latlng) {
+                    return L.marker(latlng);
+                },
+
+                // Menambahkan fungsi Klik ke sidebar untuk setiap marker
+                onEachFeature: function (feature, layer) {
+                    layer.on('click', function(e) {
+                        
+                        // CATATAN PENTING: 
+                        // Jika nama kolom di dalam GeoJSON Anda berbeda, ganti tulisan setelah "feature.properties."
+                        // Contoh: jika di atribut tabel GIS Anda namanya "Nama_SMP", maka tulis feature.properties.Nama_SMP
+                        
+                        var nama = feature.properties.Nama_SMP || feature.properties.nama || "Nama Tidak Diketahui";
+                        var kecamatan = feature.properties.Kecamatan || feature.properties.kecamatan || "-";
+                        var alamat = feature.properties.Alamat || feature.properties.alamat || "-";
+                        
+                        // Mengambil titik koordinat langsung dari klik di peta
+                        var lat = e.latlng.lat.toFixed(5);
+                        var lng = e.latlng.lng.toFixed(5);
+                        var koordinat = lat + ", " + lng;
+
+                        // Memunculkan data di sidebar kiri
+                        document.getElementById('default-instruction').style.display = 'none';
+                        document.getElementById('school-details').style.display = 'block';
+                        
+                        document.getElementById('school-name').innerText = nama;
+                        document.getElementById('school-district').innerText = kecamatan;
+                        document.getElementById('school-address').innerText = alamat;
+                        document.getElementById('school-coords').innerText = koordinat;
+                        
+                        // Memanggil foto
+                        document.getElementById('school-img').src = "images/" + nama + ".jpg";
+                        document.getElementById('school-img').onerror = function() {
+                            this.src = "default-sekolah.jpg";
+                        };
+                    });
+                }
+            }).addTo(map);
+        } else {
+            console.error("Data sebaranSekolah tidak ditemukan. Pastikan file sekolah.js sudah benar.");
+        }
+    </script>
+</body>
+</html>
